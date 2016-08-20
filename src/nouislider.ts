@@ -6,6 +6,8 @@ import {
   forwardRef,
   Input,
   OnInit,
+  OnChanges,
+  SimpleChanges,
   Output,
   Provider
 } from '@angular/core';
@@ -34,7 +36,7 @@ const NOUISLIDER_CONTROL_VALUE_ACCESSOR = new Provider(
   selector: '[nouislider]',
   providers: [NOUISLIDER_CONTROL_VALUE_ACCESSOR]
 })
-export class Nouislider implements ControlValueAccessor, OnInit {
+export class Nouislider implements ControlValueAccessor, OnInit, OnChanges {
   public el: ElementRef;
   public slider: any;
   public value: any;
@@ -76,6 +78,16 @@ export class Nouislider implements ControlValueAccessor, OnInit {
       this.writeValue(toValue(value));
     });
   }
+  
+  public ngOnChanges(changes: SimpleChanges) {
+    let change = changes['ngModel'];
+    if (change && !change.isFirstChange()) {
+      this.value = value;
+      if (this.slider) {
+        this.slider.set(value);
+      }
+    }
+  }
 
   public writeValue(value: any): void {
     if (this.value == value || String(this.value) == String(value)) {
@@ -85,12 +97,21 @@ export class Nouislider implements ControlValueAccessor, OnInit {
     this.ngModelChange.emit(value);
     this.value = value;
     if (this.slider) {
+      // Note: slider.set recurses to this writeValue function, since
+      // this function is registered as a slider.set callback in the
+      // constructor. However, the extraneous call with the new value
+      // is a no-op because this.value now matches value.
+      // TODO - although probably benign, this function should be
+      ///  reworked to avoid even the hint of an infinite loop.
       this.slider.set(value);
     }
   }
 
+  // TODO - these register functions don't appear to serve any purpose.
+  //   Clarify or remove.
+  
   public registerOnChange(fn: (_: any) => {}): void {
-    this.onTouched = fn;
+    this.onChange = fn;
   }
 
   public registerOnTouched(fn: () => {}): void {
